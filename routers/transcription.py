@@ -1,84 +1,83 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 import os
-from utils.common import transcription_audio
 from pydantic import BaseModel
-import utils.connect_db as connect_db
-
-# from sqlalchemy.orm import Session
-# from database import SessionLocal
-# from fastapi.templating import Jinja2Templates
-# template = Jinja2Templates(directory='templates')
+import database.connection_db as connection_db
+from utils.common import transcribe_file
+from utils.transcription import TranscriptionUseCases
+from utils.schemas import Transcription
+from sqlalchemy.orm import Session
+from utils.depends import get_db_session
 
 router = APIRouter()
 
 
 class TranscriptionRequest(BaseModel):
-    audio_id: str
+    file_id: str
     model: str
     transcription_id: str
 
 
-@router.get('/transcription_by_audio_id/{audio_id}')
-async def get_transcription_by_audio_id(audio_id: str):
-    pass
-
-
-@router.get('/transcription_by_audio_id')
-async def get_transcription_by_audio_id2(transcription_request: TranscriptionRequest):
-    pass
-
-
-@router.get('/transcription_by_transcription_id/{transcription_id}')
-async def get_transcription_by_transcription_id(transcription_id: str):
-    pass
-
-
-@router.get('/transcription_by_transcription_id')
-async def get_transcription_by_transcription_id(transcription_request: TranscriptionRequest):
-    pass
-
-
-@router.post('/transcribe_audio/{audio_id}')
-async def transcribe_audio_by_id(audio_id: str):
+@router.get('/transcription')
+#async def get_transcription(transcription_request: TranscriptionRequest):
+async def get_transcription(
+        transcription: Transcription,
+        db_session: Session = Depends(get_db_session),
+):
     try:
-        db = connect_db.Connect('')
-        audio_data = db.select_audio_file_by_id(audio_id)
-        if audio_data:
-            audio_full_filepath = audio_data['file_path'] + '\\' + audio_data['filename']
-            audio_file_exist = os.path.isfile(audio_full_filepath)
-
-            if audio_file_exist:
-                result = transcription_audio(filepath=audio_full_filepath)
-                db.insert_transcription(audio_data['audio_id'], result['text'], 'base')
-                return result
-            else:
-                raise HTTPException(status_code=404, detail="Arquivo de áudio não encontrado")
-
-        else:
-            raise HTTPException(status_code=404, detail="Arquivo de áudio não encontrado")
+        transc = TranscriptionUseCases(db_session=db_session)
+        result = transc.get_transcription(transcription=transcription)
+        print('get_transcription OK: ', result )
+        return {
+            'response': result,
+            'status': status.HTTP_200_OK
+        }
 
     except Exception as er:
-        raise HTTPException(status_code=500, detail="Erro interno do servidor.")
+        raise HTTPException(status_code= 500, detail= f"Erro interno do servidor: {er}")
 
-
-@router.post('/transcribe_audio')
-async def transcribe_audio(transcription_request: TranscriptionRequest):
+@router.post('/transcribe_2')
+async def post_transcribe_2(
+        transcription: Transcription,
+        db_session: Session = Depends(get_db_session),
+):
     try:
-        db = connect_db.Connect('')
-        audio_data = db.select_audio_file_by_id(transcription_request.audio_id)
-        if audio_data:
-            audio_full_filepath = audio_data['file_path'] + '\\' + audio_data['filename']
-            audio_file_exist = os.path.isfile(audio_full_filepath)
+        transc = TranscriptionUseCases(db_session=db_session)
+        transc.insert_transcription(transcription=transcription)
 
-            if audio_file_exist:
-                result = transcription_audio(filepath=audio_full_filepath)
-                db.insert_transcription(audio_data['audio_id'], result['text'], transcription_request.model)
+
+        return JSONResponse(
+            content={'msg': 'success'},
+            status_code=status.HTTP_201_CREATED
+        )
+    except Exception as er:
+        print(er)
+        raise HTTPException(status_code= 500, detail= f"Erro interno do servidor: {er}")
+
+@router.post('/transcribe')
+async def post_transcribe(transcription_request: TranscriptionRequest):
+    try:
+        db = connection_db.Connect()
+        print('aqui 2 ')
+        file_data = db.select_file_by_id(transcription_request.file_id)
+        print('aqui 3')
+        print(file_data)
+        if file_data:
+            full_filepath = file_data['file_path'] + '/' + file_data['file_name']
+            print('### full_filepath: ',full_filepath)
+            file_exists = os.path.isfile(full_filepath)
+
+            if file_exists:
+                result = transcribe_file(filepath=full_filepath)
+                #db.insert_transcription(file_data['file_id'], user_id=1, name='', transcription_text=result['text'], model=transcription_request.model)
+
                 return result
             else:
-                raise HTTPException(status_code=404, detail="Arquivo de áudio não encontrado")
-
+                print("Arquivo não encontrado")
+                raise HTTPException(status_code=404, detail="Arquivo não encontrado")
         else:
-            raise HTTPException(status_code=404, detail="Arquivo de áudio não encontrado")
+            raise HTTPException(status_code=404, detail="Arquivo não encontrado no banco de dados")
 
     except Exception as er:
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+        print(er)
+        raise HTTPException(status_code= 500, detail= f"Erro interno do servidor: {er}")

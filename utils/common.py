@@ -6,7 +6,7 @@ from datetime import timedelta
 
 
 
-def transcription_audio(filepath: str, model_type="base", out="default"):
+def transcribe_file(filepath: str, model_type="base", out="default"):
 
     #model_type = 'base'
     model = whisper.load_model(model_type)
