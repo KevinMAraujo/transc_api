@@ -52,7 +52,7 @@ async def post_transcribe_2(
         )
     except Exception as er:
         print(er)
-        raise HTTPException(status_code= 500, detail= f"Erro interno do servidor: {er}")
+        raise HTTPException(status_code= 500, detail= f" Erro interno do servidor: {er}")
 
 @router.post('/transcribe')
 async def post_transcribe(transcription_request: TranscriptionRequest):

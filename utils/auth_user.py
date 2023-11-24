@@ -3,6 +3,7 @@ from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql.expression import select
 from jose import jwt, JWTError
 from decouple import config
 
@@ -23,6 +24,13 @@ class UserUseCases:
         self.db_session = db_session
 
     def user_registrer(self, user: User):
+        db_user = self.db_session.scalar(select(User).where(User.name == user.name or User.email == user.email))
+        #db_user = self.db_session.scalar(select(User).where(User.email == user.email))
+        if db_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='User or email already exists'
+            )
         user_model = UserModel(
             #id=
             name=user.name,
@@ -35,6 +43,8 @@ class UserUseCases:
             role_id = user.role_id
         )
         try:
+
+
             self.db_session.add(user_model)
             self.db_session.commit()
         except IntegrityError:

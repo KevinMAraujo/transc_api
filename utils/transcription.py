@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from datetime import  datetime
 from fastapi.exceptions import HTTPException
 from fastapi import status
+from fastapi.responses import JSONResponse
 from database.models import TranscriptionModel
 from utils.schemas import Transcription
 from utils.common import transcribe_file
@@ -22,6 +23,7 @@ class TranscriptionUseCases:
         transc_on_db = self.db_session.query(TranscriptionModel).filter_by(file_id=transcription.file_id).first()
 
         if transc_on_db is None:
+            print('Invalid username or password')
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid username or password'
@@ -39,23 +41,39 @@ class TranscriptionUseCases:
             file_id=transcription.file_id,
             name=transcription.name,
             text=transcription.text,
-            transcribed_at=datetime.utcnow(),
+            transcribed_at='',
             type=transcription.type
         )
         try:
-
+            print('### 1')
             file_data = self.db_session.query(FileModel).filter_by(id=transcription_model.file_id).first()
+            print('### 2')
+            print(file_data)
             if file_data is None:
+                '''return JSONResponse(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    content={"message": "Arquivo não encontrado"}
+                )'''
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail='Arquivo não encontrado'
                 )
-            print(file_data)
+
 
             if file_data:
-                full_filepath = file_data.file_path + '/' + file_data.file_name
+                full_filepath = file_data.file_path + file_data.file_name
                 print('### full_filepath: ', full_filepath)
                 file_exists = os.path.isfile(full_filepath)
+                #####
+
+                result = transcribe_file(filepath=full_filepath)
+                print(f'### Result {result}')
+                transcription_model.text = result
+                self.db_session.add(transcription_model)
+                self.db_session.commit()
+
+                return f'Registro Inserido: {result}'
+                ####
 
                 if file_exists:
                     result = transcribe_file(filepath=full_filepath)
