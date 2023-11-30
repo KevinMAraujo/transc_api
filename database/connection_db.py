@@ -76,7 +76,7 @@ class Connect(object):
             '''if self.connection:
                 pass'''
             cursor = self.cursor
-            sql = "INSERT INTO transcriptions (file_id, user_id, name, transcription_text, type, created_at) VALUES (%s, %s, %s, %s, %s, %s)"
+            sql = "INSERT INTO transcriptions (file_id, user_id, name, text, type, created_at) VALUES (%s, %s, %s, %s, %s, %s)"
             values = (file_id, user_id, name, transcription_text, model, created_date)
             cursor.execute(sql, values)
             print("\n")
