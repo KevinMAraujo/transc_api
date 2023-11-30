@@ -21,7 +21,7 @@ class TranscriptionModel(BaseModel):
     file_id: str
     model: str
     user_id: str
-
+    name: str
 @router.get('/transcription')
 #async def get_transcription(transcription_request: TranscriptionRequest):
 async def get_transcription(
@@ -72,7 +72,7 @@ async def post_transcribe(transcription_request: TranscriptionModel):
             print("###: ",full_filepath)
             result = transcribe_file(filepath=full_filepath)
             db = connection_db.Connect()
-            db.insert_transcription(file_data['file_id'], user_id=transcription_request.user_id, name='teste kevin', transcription_text=result['text'], model=transcription_request.model)
+            db.insert_transcription(file_data['file_id'], user_id=transcription_request.user_id, name=transcription_request.name, transcription_text=result['text'], model=transcription_request.model)
 
             return result
             '''
